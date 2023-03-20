@@ -1,0 +1,59 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+# 这里声明git actions的名字
+name: Go
+
+# 指定监听事件，这里监听push到git分支main的事件
+on:
+  push:
+    branches: [ "main" ]
+
+# 这里定义工作流，工作流配置对应job任务
+jobs:
+  code: # 声明job的名字
+    runs-on: ubuntu-latest   # 使用ubuntu系统镜像运行脚本
+    # steps定义job的步骤，具体执行，运行xxx，-字符开头的一块则为一个步骤，可以配置多个步骤
+    steps:                   
+      - uses: actions/checkout@v2   # 步骤1：下载git仓库中的代码，使用官方提供，使用库用uses关键字
+      - name: SetUp Go              # 步骤2：下载go代码
+        uses: actions/setup-go@v3   # 使用官方提供
+        with:
+          go-version: 1.16          # 指定go版本1.16
+      - name: Build Go              # 步骤3：编译仓库中的代码
+        run: go build -v ./
+  restart: # 声明另一个job的名字
+    runs-on: ubuntu-latest   
+    steps:
+      - name: Check my-json-server
+        uses: cross-the-world/ssh-pipeline@master   # 使用别人包装好的步骤，执行远程操作的库
+        with:
+          host: ${{ secrets.REMOTE_HOST }}      # 远程连接的host，引用配置
+          user: ${{ secrets.SSH_USERNAME }}     # 远程连接的用户名，引用配置
+          key: ${{ secrets.ACCESS_TOKEN }}      # 远程连接的ssh秘钥，引用配置
+          port: '22'                            # ssh端口
+          connect_timeout: 10s                  # 远程连接的超时时间
+          # 下面是执行的脚本内容，找到go服务进程，通过发送信号关闭进程，调用build.sh脚本编译代码，用nohup重启服务
+          script: |
+            echo "hello egg" 
+            (ps aux|grep main|grep -v "grep"|head -n 1|awk '{printf $2}'|xargs kill -15) &&
+            (sh /home/tool/golearn/src/test_actions/build.sh) &&
+            (nohup /home/tool/golearn/src/test_actions/main > /home/tool/golearn/src/test_actions/error.log 2>&1 &) 
+            echo "over"
+    needs: deploy   # 依赖关键字，等deploy的执行完了再执行restart
+  deploy:
+    runs-on: ubuntu-latest   
+
+    steps:  
+      - uses: actions/checkout@v2  
+      - name: Deploy to Server  # 使用别人包装好的步骤，推送文件模块到远程服务器
+        uses: AEnterprise/rsync-deploy@v1.0  
+        env:
+          DEPLOY_KEY: ${{ secrets.ACCESS_TOKEN }}   #  远程连接的ssh秘钥，引用配置
+          ARGS: -avz --delete                       # rsync参数
+          SERVER_PORT: '22'                         # ssh端口
+          FOLDER: ./                                # 要推送的文件夹，路径相对于代码仓库的根目录
+          SERVER_IP: ${{ secrets.REMOTE_HOST }}     # 远程连接的host，引用配置
+          USERNAME: ${{ secrets.SSH_USERNAME }}     # 远程连接的用户名，引用配置
+          SERVER_DESTINATION: /home/tool/golearn/src/test_actions  # 部署到目标文件的路径
+    needs: code # 等code完成再执行deploy
