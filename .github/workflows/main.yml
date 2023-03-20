@@ -37,8 +37,8 @@ jobs:
           script: |
             echo "hello egg" 
             (ps aux|grep main|grep -v "grep"|head -n 1|awk '{printf $2}'|xargs kill -15) &&
-            (sh /home/tool/golearn/src/test_actions/build.sh) &&
-            (nohup /home/tool/golearn/src/test_actions/main > /home/tool/golearn/src/test_actions/error.log 2>&1 &) 
+            (sh /home/tool/golearn/src/egg_actions/build.sh) &&
+            (nohup /home/tool/golearn/src/egg_actions/main > /home/tool/golearn/src/egg_actions/error.log 2>&1 &)
             echo "over"
     needs: deploy   # 依赖关键字，等deploy的执行完了再执行restart
   deploy:
@@ -55,5 +55,5 @@ jobs:
           FOLDER: ./                                # 要推送的文件夹，路径相对于代码仓库的根目录
           SERVER_IP: ${{ secrets.REMOTE_HOST }}     # 远程连接的host，引用配置
           USERNAME: ${{ secrets.SSH_USERNAME }}     # 远程连接的用户名，引用配置
-          SERVER_DESTINATION: /home/tool/golearn/src/test_actions  # 部署到目标文件的路径
+          SERVER_DESTINATION: /home/tool/golearn/src/egg_actions  # 部署到目标文件的路径
     needs: code # 等code完成再执行deploy
