@@ -20,11 +20,13 @@ CI全称 Continuous Integration，代表持续集成，CD则是 Continuous Deliv
 
 ***
 
+#### 下面是一个完整的例子，监听git的push事件，触发传输到远程服务器，平滑关闭服务并重启服务的例子
+
 ##### 第一步：github上开一个空项目
 
 ##### 第二步：增加web服务器代码，并推送push到github
 
-服务器代码
+服务器代码, `main.go`
 ```go
 package  main
 
@@ -48,7 +50,7 @@ func main() {
 	//启动web服务器，监听两个API行为，1个测试，1个重启
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Test Print:", test.Test())
-		w.Write([]byte("hello http HandleFunc"))
+		w.Write([]byte("hello http HandleFunc, Result:" + test.Test()))
 	})
 	http.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
 		quit <- syscall.SIGINT
@@ -81,10 +83,19 @@ go mod init
 go get
 ``
 
-其中go.mod内容
+其中go.mod内容如下
 ```go
 module github.com/toegg/egg_actions
 go 1.16
+```
+
+增加编译的shell脚本, `build.sh`
+```go
+#!/bin/bash
+
+cd /home/tool/golearn/src/egg_actions
+
+/home/tool/go/go/bin/go build main.go
 ```
 
 最后把内容推送push到github，必须推送push
@@ -93,7 +104,8 @@ go 1.16
 
 选择Actions，点击build_new_actions
 
-进入自定义yaml配置文件界面，也可以选择提供的模板，右边可选择，不同编程语言等。我们这里用我已经写好的，先贴上去
+进入自定义yaml配置文件界面，也可以选择提供的模板，右边可选择，不同编程语言等。我们这里用我已经写好的，先贴上去。  
+用到了3个`job`，`code`:测试编译go代码，`restart`:平滑关闭服务并重启，`deply`:推送文件模块到远程服务器
 ```go
 # 这里声明git actions的名字
 name: Go
@@ -105,7 +117,7 @@ on:
 
 # 这里定义工作流，工作流配置对应job任务
 jobs:
-  code: # 声明job的名字
+  code: # 声明job的名字(这个job主要用来介绍，可以用做测试go test流程)
     runs-on: ubuntu-latest   # 使用ubuntu系统镜像运行脚本
     # steps定义job的步骤，具体执行，运行xxx，-字符开头的一块则为一个步骤，可以配置多个步骤
     steps:                   
@@ -172,10 +184,7 @@ ACCESS_TOKEN : 远程连接的ssh秘钥
 
 ##### 第五步：编译go程序可执行文件，手动上传服务器，启动web服务
 因为我们为了测试重启，所以先手动上传服务器并启动web服务。
-```go
-chmod +x main
-nohup main > /dev/null 2>&1 &
-```
+
 
 ##### 第六步：重新跑actions，测试结果
 

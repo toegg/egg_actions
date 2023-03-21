@@ -20,7 +20,7 @@ func main() {
 	//启动web服务器，监听两个API行为，1个测试，1个重启
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Test Print:", test.Test())
-		w.Write([]byte("hello http HandleFunc"))
+		w.Write([]byte("hello http HandleFunc, Result:" + test.Test()))
 	})
 	http.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
 		quit <- syscall.SIGINT

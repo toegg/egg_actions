@@ -1,5 +1,5 @@
 package test
 
 func Test() string {
-	return "Hello TestActions"
+	return "Hello TestActions Change Push"
 }
